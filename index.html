@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+
+    <script>
+        // Firebase Configuration (Replace with actual Firebase details)
+        const firebaseConfig = {
+    apiKey: "AIzaSyCM7nVs98RN8UdnVd9PgeRkQNu54c-Z7Es",
+    authDomain: "ludo-e645e.firebaseapp.com",
+    databaseURL: "https://ludo-e645e-default-rtdb.firebaseio.com",
+    projectId: "ludo-e645e",
+    storageBucket: "ludo-e645e.firebasestorage.app",
+     messagingSenderId: "448963096452",
+     appId: "1:448963096452:web:5d8002d3b3baddadca77d1",
+    };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+</head>
+<body>
+    <div id="start-menu">
+        <h2>Welcome to Ludo Multiplayer</h2>
+        <button id="createGame">Create Game</button>
+        <button id="joinGame">Join Game</button>
+        <input type="text" id="roomCode" placeholder="Enter Room Code" />
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div class="ludo-container">
+            <div class="ludo">
+                <div class="player-pieces"></div>
+            </div>
+            <div class="footer">
+                <button id="dice-btn" class="btn btn-dice">Roll</button>
+                <div class="dice-value"></div>
+                <button id="reset-btn" class="btn btn-reset">Reset</button>
+            </div>
+            <h2 class="active-player">Active Player: <span></span></h2>
+        </div>
+    </div>
+
+    <script src="./Ludo.js"></script>
+    <script src="./main.js"></script>
+    
+</body>
+</html>
