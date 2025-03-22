@@ -1,6 +1,11 @@
+import { Ludo } from './ludo/Ludo.js';
+
 // WebRTC Communication for Multiplayer Ludo
 export let dataChannel = null;
 export let peerConnection = new RTCPeerConnection();
+
+// ✅ Create a Ludo instance for game logic
+export let ludo = new Ludo();
 
 // Set up WebRTC Data Channel
 export function setupDataChannel(channel) {
@@ -30,5 +35,13 @@ export function handleGameMessage(message) {
     
     else if (gameState.type === "movePiece") {
         ludo.setPiecePosition(gameState.player, gameState.piece, gameState.newPosition);
+    }
+
+    else if (gameState.type === "turnChange") {
+        ludo.turn = gameState.turn;
+    }
+
+    else if (gameState.type === "resetGame") {
+        ludo.resetGame();
     }
 }
