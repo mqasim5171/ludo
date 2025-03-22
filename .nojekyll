@@ -1,0 +1,4 @@
+echo "" > .nojekyll
+git add .nojekyll
+git commit -m "Fix GitHub Pages not serving JS files"
+git push
