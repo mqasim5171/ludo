@@ -1,9 +1,25 @@
 import { Ludo } from './ludo/Ludo.js';
 
+// ✅ Import Firebase properly
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-// Initialize Firebase Realtime Database
-const db = getDatabase();
+// ✅ Firebase Configuration (Make sure this is correct)
+const firebaseConfig = {
+    apiKey: "AIzaSyCM7nVs98RN8UdnVd9PgeRkQNu54c-Z7Es",
+    authDomain: "ludo-e645e.firebaseapp.com",
+    databaseURL: "https://ludo-e645e-default-rtdb.firebaseio.com",
+    projectId: "ludo-e645e",
+    storageBucket: "ludo-e645e.appspot.com", // Fixed typo
+    messagingSenderId: "448963096452",
+    appId: "1:448963096452:web:5d8002d3b3baddadca77d1"
+};
+
+// ✅ Initialize Firebase App
+const app = initializeApp(firebaseConfig);
+
+// ✅ Initialize Firebase Database AFTER the app is initialized
+const db = getDatabase(app);
 
 // WebRTC Setup
 let peerConnection = new RTCPeerConnection();
