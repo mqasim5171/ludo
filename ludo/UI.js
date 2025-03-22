@@ -1,9 +1,13 @@
 import { COORDINATES_MAP, PLAYERS, STEP_LENGTH } from './constants.js';
 
 const diceButtonElement = document.querySelector('#dice-btn');
-const playerPiecesElements = {
-    P1: document.querySelectorAll('[player-id="P1"].player-piece'),
-    P2: document.querySelectorAll('[player-id="P2"].player-piece'),
+
+// ✅ Get player pieces dynamically to ensure they exist
+function getPlayerPieces() {
+    return {
+        P1: document.querySelectorAll('[player-id="P1"].player-piece'),
+        P2: document.querySelectorAll('[player-id="P2"].player-piece'),
+    };
 }
 
 export class UI {
@@ -12,49 +16,47 @@ export class UI {
     }
 
     static listenResetClick(callback) {
-        document.querySelector('button#reset-btn').addEventListener('click', callback)
+        document.querySelector('button#reset-btn').addEventListener('click', callback);
     }
 
     static listenPieceClick(callback) {
-        document.querySelector('.player-pieces').addEventListener('click', callback)
+        document.querySelector('.player-pieces').addEventListener('click', callback);
     }
 
-    /**
-     * 
-     * @param {string} player 
-     * @param {Number} piece 
-     * @param {Number} newPosition 
-     */
     static setPiecePosition(player, piece, newPosition) {
-        if(!playerPiecesElements[player] || !playerPiecesElements[player][piece]) {
-            console.error(`Player element of given player: ${player} and piece: ${piece} not found`)
+        const playerPiecesElements = getPlayerPieces(); // ✅ Fetch fresh elements
+
+        if (!playerPiecesElements[player] || !playerPiecesElements[player][piece]) {
+            console.warn(`⚠️ Player element for ${player}, piece ${piece} not found`);
             return;
         }
 
         const [x, y] = COORDINATES_MAP[newPosition];
-
         const pieceElement = playerPiecesElements[player][piece];
         pieceElement.style.top = y * STEP_LENGTH + '%';
         pieceElement.style.left = x * STEP_LENGTH + '%';
     }
 
     static setTurn(index) {
-        if(index < 0 || index >= PLAYERS.length) {
-            console.error('index out of bound!');
+        if (index < 0 || index >= PLAYERS.length) {
+            console.error('⚠️ Invalid turn index!');
             return;
         }
-        
-        const player = PLAYERS[index];
 
-        // Display player ID
+        const player = PLAYERS[index];
         document.querySelector('.active-player span').innerText = player;
 
         const activePlayerBase = document.querySelector('.player-base.highlight');
-        if(activePlayerBase) {
+        if (activePlayerBase) {
             activePlayerBase.classList.remove('highlight');
         }
-        // highlight
-        document.querySelector(`[player-id="${player}"].player-base`).classList.add('highlight')
+
+        const newActiveBase = document.querySelector(`[player-id="${player}"].player-base`);
+        if (newActiveBase) {
+            newActiveBase.classList.add('highlight');
+        } else {
+            console.warn(`⚠️ Player base for ${player} not found`);
+        }
     }
 
     static enableDice() {
@@ -65,35 +67,25 @@ export class UI {
         diceButtonElement.setAttribute('disabled', '');
     }
 
-    /**
-     * 
-     * @param {string} player 
-     * @param {Number[]} pieces 
-     */
     static highlightPieces(player, pieces) {
+        const playerPiecesElements = getPlayerPieces(); // ✅ Fetch fresh elements
+
         pieces.forEach(piece => {
-            const pieceElement = playerPiecesElements[player][piece];
-            pieceElement.classList.add('highlight');
-        })
+            if (playerPiecesElements[player][piece]) {
+                playerPiecesElements[player][piece].classList.add('highlight');
+            } else {
+                console.warn(`⚠️ Cannot highlight piece ${piece} for ${player}, not found`);
+            }
+        });
     }
 
     static unhighlightPieces() {
         document.querySelectorAll('.player-piece.highlight').forEach(ele => {
             ele.classList.remove('highlight');
-        })
+        });
     }
 
     static setDiceValue(value) {
         document.querySelector('.dice-value').innerText = value;
     }
 }
-
-// UI.setPiecePosition('P1', 0, 0);
-// UI.setTurn(0);
-// UI.setTurn(1);
-
-// UI.disableDice();
-// UI.enableDice();
-// UI.highlightPieces('P1', [0]);
-// UI.unhighlightPieces();
-// UI.setDiceValue(5);
