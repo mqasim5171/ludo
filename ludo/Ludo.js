@@ -1,24 +1,23 @@
 import { BASE_POSITIONS, HOME_ENTRANCE, HOME_POSITIONS, PLAYERS, SAFE_POSITIONS, START_POSITIONS, STATE, TURNING_POINTS } from './constants.js';
 import { UI } from './UI.js';
+import { sendGameState } from './network.js'; // WebRTC Communication
 
 export class Ludo {
     currentPositions = {
         P1: [],
         P2: []
-    }
+    };
 
     _diceValue;
     get diceValue() {
         return this._diceValue;
     }
     set diceValue(value) {
-        // Enforce "Roll 6 to Start" rule
         if (!this.currentPositions[this.turn].some(p => p > -1) && value !== 6) {
             console.log("You must roll a 6 to move a piece out of home!");
-            return; // Do not allow movement unless it's a 6
+            return;
         }
         this._diceValue = value;
-
         UI.setDiceValue(value);
     }
 
@@ -37,8 +36,7 @@ export class Ludo {
     }
     set state(value) {
         this._state = value;
-
-        if(value === STATE.DICE_NOT_ROLLED) {
+        if (value === STATE.DICE_NOT_ROLLED) {
             UI.enableDice();
             UI.unhighlightPieces();
         } else {
@@ -47,41 +45,36 @@ export class Ludo {
     }
 
     constructor() {
-        console.log('Hello World! Lets play Ludo!');
-
-        // this.diceValue = 4;
-        // this.turn = 0;
-        // this.state = STATE.DICE_ROLLED;
+        console.log('🎲 Welcome to Ludo Multiplayer!');
         this.listenDiceClick();
         this.listenResetClick();
         this.listenPieceClick();
-
         this.resetGame();
-        // this.setPiecePosition('P1', 0, 0);
-        // this.setPiecePosition('P2', 0, 1);
-        // this.diceValue = 6;
-        // console.log(this.getEligiblePieces('P1'))
-        
     }
 
     listenDiceClick() {
-        UI.listenDiceClick(this.onDiceClick.bind(this))
+        UI.listenDiceClick(this.onDiceClick.bind(this));
     }
 
     onDiceClick() {
-        console.log('dice clicked!');
         this.diceValue = 1 + Math.floor(Math.random() * 6);
         this.state = STATE.DICE_ROLLED;
-        
+
+        // Send dice roll to other players
+        sendGameState({
+            type: "diceRoll",
+            diceValue: this.diceValue,
+            turn: this.turn
+        });
+
         this.checkForEligiblePieces();
     }
 
     checkForEligiblePieces() {
         const player = PLAYERS[this.turn];
-        // eligible pieces of given player
         const eligiblePieces = this.getEligiblePieces(player);
-        if(eligiblePieces.length) {
-            // highlight the pieces
+
+        if (eligiblePieces.length) {
             UI.highlightPieces(player, eligiblePieces);
         } else {
             this.incrementTurn();
@@ -91,27 +84,27 @@ export class Ludo {
     incrementTurn() {
         this.turn = this.turn === 0 ? 1 : 0;
         this.state = STATE.DICE_NOT_ROLLED;
+
+        // Sync turn change
+        sendGameState({
+            type: "turnChange",
+            turn: this.turn
+        });
     }
 
     getEligiblePieces(player) {
         return [0, 1, 2, 3].filter(piece => {
             const currentPosition = this.currentPositions[player][piece];
 
-            if(currentPosition === HOME_POSITIONS[player]) {
+            if (currentPosition === HOME_POSITIONS[player]) {
                 return false;
             }
 
-            if(
-                BASE_POSITIONS[player].includes(currentPosition)
-                && this.diceValue !== 6
-            ){
+            if (BASE_POSITIONS[player].includes(currentPosition) && this.diceValue !== 6) {
                 return false;
             }
 
-            if(
-                HOME_ENTRANCE[player].includes(currentPosition)
-                && this.diceValue > HOME_POSITIONS[player] - currentPosition
-                ) {
+            if (HOME_ENTRANCE[player].includes(currentPosition) && this.diceValue > HOME_POSITIONS[player] - currentPosition) {
                 return false;
             }
 
@@ -120,17 +113,17 @@ export class Ludo {
     }
 
     listenResetClick() {
-        UI.listenResetClick(this.resetGame.bind(this))
+        UI.listenResetClick(this.resetGame.bind(this));
     }
 
     resetGame() {
-        console.log('reset game');
+        console.log('🔄 Resetting game...');
         this.currentPositions = structuredClone(BASE_POSITIONS);
 
         PLAYERS.forEach(player => {
             [0, 1, 2, 3].forEach(piece => {
-                this.setPiecePosition(player, piece, this.currentPositions[player][piece])
-            })
+                this.setPiecePosition(player, piece, this.currentPositions[player][piece]);
+            });
         });
 
         this.turn = 0;
@@ -143,11 +136,9 @@ export class Ludo {
 
     onPieceClick(event) {
         const target = event.target;
-
-        if(!target.classList.contains('player-piece') || !target.classList.contains('highlight')) {
+        if (!target.classList.contains('player-piece') || !target.classList.contains('highlight')) {
             return;
         }
-        console.log('piece clicked')
 
         const player = target.getAttribute('player-id');
         const piece = target.getAttribute('piece');
@@ -155,12 +146,20 @@ export class Ludo {
     }
 
     handlePieceClick(player, piece) {
-        console.log(player, piece);
         const currentPosition = this.currentPositions[player][piece];
-        
-        if(BASE_POSITIONS[player].includes(currentPosition)) {
+
+        if (BASE_POSITIONS[player].includes(currentPosition)) {
             this.setPiecePosition(player, piece, START_POSITIONS[player]);
             this.state = STATE.DICE_NOT_ROLLED;
+
+            // Broadcast move to other players
+            sendGameState({
+                type: "movePiece",
+                player: player,
+                piece: piece,
+                newPosition: START_POSITIONS[player]
+            });
+
             return;
         }
 
@@ -170,28 +169,26 @@ export class Ludo {
 
     setPiecePosition(player, piece, newPosition) {
         this.currentPositions[player][piece] = newPosition;
-        UI.setPiecePosition(player, piece, newPosition)
+        UI.setPiecePosition(player, piece, newPosition);
     }
 
     movePiece(player, piece, moveBy) {
-        // this.setPiecePosition(player, piece, this.currentPositions[player][piece] + moveBy)
         const interval = setInterval(() => {
             this.incrementPiecePosition(player, piece);
             moveBy--;
 
-            if(moveBy === 0) {
+            if (moveBy === 0) {
                 clearInterval(interval);
 
-                // check if player won
-                if(this.hasPlayerWon(player)) {
-                    alert(`Player: ${player} has won!`);
+                if (this.hasPlayerWon(player)) {
+                    alert(`🎉 Player ${player} has won!`);
                     this.resetGame();
                     return;
                 }
 
                 const isKill = this.checkForKill(player, piece);
 
-                if(isKill || this.diceValue === 6) {
+                if (isKill || this.diceValue === 6) {
                     this.state = STATE.DICE_NOT_ROLLED;
                     return;
                 }
@@ -199,6 +196,14 @@ export class Ludo {
                 this.incrementTurn();
             }
         }, 200);
+
+        // Broadcast move to other players
+        sendGameState({
+            type: "movePiece",
+            player: player,
+            piece: piece,
+            newPosition: this.currentPositions[player][piece]
+        });
     }
 
     checkForKill(player, piece) {
@@ -210,30 +215,29 @@ export class Ludo {
         [0, 1, 2, 3].forEach(piece => {
             const opponentPosition = this.currentPositions[opponent][piece];
 
-            if(currentPosition === opponentPosition && !SAFE_POSITIONS.includes(currentPosition)) {
+            if (currentPosition === opponentPosition && !SAFE_POSITIONS.includes(currentPosition)) {
                 this.setPiecePosition(opponent, piece, BASE_POSITIONS[opponent][piece]);
-                kill = true
+                kill = true;
             }
         });
 
-        return kill
+        return kill;
     }
 
     hasPlayerWon(player) {
-        return [0, 1, 2, 3].every(piece => this.currentPositions[player][piece] === HOME_POSITIONS[player])
+        return [0, 1, 2, 3].every(piece => this.currentPositions[player][piece] === HOME_POSITIONS[player]);
     }
 
     incrementPiecePosition(player, piece) {
         this.setPiecePosition(player, piece, this.getIncrementedPosition(player, piece));
     }
-    
+
     getIncrementedPosition(player, piece) {
         const currentPosition = this.currentPositions[player][piece];
 
-        if(currentPosition === TURNING_POINTS[player]) {
+        if (currentPosition === TURNING_POINTS[player]) {
             return HOME_ENTRANCE[player][0];
-        }
-        else if(currentPosition === 51) {
+        } else if (currentPosition === 51) {
             return 0;
         }
         return currentPosition + 1;
