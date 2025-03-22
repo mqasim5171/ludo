@@ -1,4 +1,5 @@
-import { Ludo } from './ludo/Ludo.js';
+<script type="module" src="./ludo/Ludo.js"></script>
+
 import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
 // Initialize Firebase Realtime Database
