@@ -1,34 +1,41 @@
 import { Ludo } from './ludo/Ludo.js';
 
 // ✅ Import Firebase properly
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-// ✅ Firebase Configuration (Make sure this is correct)
+// ✅ Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCM7nVs98RN8UdnVd9PgeRkQNu54c-Z7Es",
     authDomain: "ludo-e645e.firebaseapp.com",
     databaseURL: "https://ludo-e645e-default-rtdb.firebaseio.com",
     projectId: "ludo-e645e",
-    storageBucket: "ludo-e645e.appspot.com", // Fixed typo
+    storageBucket: "ludo-e645e.appspot.com",
     messagingSenderId: "448963096452",
     appId: "1:448963096452:web:5d8002d3b3baddadca77d1"
 };
 
-// ✅ Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+// ✅ Ensure Firebase is initialized only once
+let app;
+if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApps()[0]; // If Firebase was already initialized, reuse the instance
+}
 
-// ✅ Initialize Firebase Database AFTER the app is initialized
+// ✅ Initialize Firebase Database AFTER Firebase is initialized
 const db = getDatabase(app);
 
-// WebRTC Setup
+// ✅ WebRTC Setup
 let peerConnection = new RTCPeerConnection();
 let dataChannel;
 let roomId;
 
+// ✅ Handle UI Events
 document.getElementById('createGame').addEventListener('click', createGame);
 document.getElementById('joinGame').addEventListener('click', joinGame);
 
+// ✅ Create Game
 async function createGame() {
     const roomRef = push(ref(db, 'rooms'));
     roomId = roomRef.key;
@@ -40,6 +47,7 @@ async function createGame() {
     setupWebRTC(true);
 }
 
+// ✅ Join Game
 async function joinGame() {
     roomId = document.getElementById('roomCode').value;
     if (!roomId) {
@@ -53,31 +61,34 @@ async function joinGame() {
     setupWebRTC(false);
 }
 
-// WebRTC Setup with Firebase Signaling
+// ✅ WebRTC Setup with Firebase Signaling
 async function setupWebRTC(isHost) {
     const roomRef = ref(db, 'rooms/' + roomId);
 
     peerConnection.ondatachannel = (event) => {
         dataChannel = event.channel;
         dataChannel.onmessage = (event) => handleGameMessage(event.data);
+        console.log("✅ Data channel open!");
     };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            set(ref(db, `rooms/${roomId}/ice`), event.candidate);
+            push(ref(db, `rooms/${roomId}/ice`), event.candidate);
         }
     };
 
     onValue(ref(db, `rooms/${roomId}/ice`), async (snapshot) => {
         if (snapshot.exists()) {
-            const iceCandidate = new RTCIceCandidate(snapshot.val());
-            await peerConnection.addIceCandidate(iceCandidate);
+            snapshot.forEach(childSnapshot => {
+                const iceCandidate = new RTCIceCandidate(childSnapshot.val());
+                peerConnection.addIceCandidate(iceCandidate);
+            });
         }
     });
 
     if (isHost) {
         dataChannel = peerConnection.createDataChannel("game");
-        dataChannel.onopen = () => console.log("Data channel open");
+        dataChannel.onopen = () => console.log("✅ Data channel open!");
         dataChannel.onmessage = (event) => handleGameMessage(event.data);
 
         const offer = await peerConnection.createOffer();
@@ -103,20 +114,7 @@ async function setupWebRTC(isHost) {
     }
 }
 
-// Sync Game State
-function sendGameState(state) {
-    if (dataChannel && dataChannel.readyState === "open") {
-        dataChannel.send(JSON.stringify(state));
-    }
-}
-
-function handleGameMessage(message) {
-    let gameState = JSON.parse(message);
-    console.log("Received game state:", gameState);
-    // Update game UI based on received state
-}
-
-// Hook WebRTC into Ludo Game
+// ✅ Hook WebRTC into Ludo Game
 const ludo = new Ludo();
 const originalRollDice = ludo.rollDice;
 ludo.rollDice = function() {
