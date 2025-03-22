@@ -1,4 +1,4 @@
-<script type="module" src="./ludo/Ludo.js"></script>
+import { Ludo } from './ludo/Ludo.js';
 
 import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
