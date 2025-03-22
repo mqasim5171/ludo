@@ -4,8 +4,8 @@ import { sendGameState } from './network.js'; // WebRTC Communication
 
 export class Ludo {
     currentPositions = {
-        P1: [],
-        P2: []
+        P1: [...BASE_POSITIONS.P1],
+        P2: [...BASE_POSITIONS.P2]
     };
 
     _diceValue;
@@ -21,7 +21,7 @@ export class Ludo {
         UI.setDiceValue(value);
     }
 
-    _turn;
+    _turn = 0;
     get turn() {
         return this._turn;
     }
@@ -30,7 +30,7 @@ export class Ludo {
         UI.setTurn(value);
     }
 
-    _state;
+    _state = STATE.DICE_NOT_ROLLED;
     get state() {
         return this._state;
     }
@@ -60,7 +60,6 @@ export class Ludo {
         this.diceValue = 1 + Math.floor(Math.random() * 6);
         this.state = STATE.DICE_ROLLED;
 
-        // Send dice roll to other players
         sendGameState({
             type: "diceRoll",
             diceValue: this.diceValue,
@@ -82,10 +81,9 @@ export class Ludo {
     }
 
     incrementTurn() {
-        this.turn = this.turn === 0 ? 1 : 0;
+        this.turn = (this.turn + 1) % PLAYERS.length;
         this.state = STATE.DICE_NOT_ROLLED;
 
-        // Sync turn change
         sendGameState({
             type: "turnChange",
             turn: this.turn
@@ -128,6 +126,10 @@ export class Ludo {
 
         this.turn = 0;
         this.state = STATE.DICE_NOT_ROLLED;
+
+        sendGameState({
+            type: "resetGame"
+        });
     }
 
     listenPieceClick() {
@@ -152,7 +154,6 @@ export class Ludo {
             this.setPiecePosition(player, piece, START_POSITIONS[player]);
             this.state = STATE.DICE_NOT_ROLLED;
 
-            // Broadcast move to other players
             sendGameState({
                 type: "movePiece",
                 player: player,
@@ -197,7 +198,6 @@ export class Ludo {
             }
         }, 200);
 
-        // Broadcast move to other players
         sendGameState({
             type: "movePiece",
             player: player,
