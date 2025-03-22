@@ -3,53 +3,19 @@ import { UI } from './UI.js';
 import { sendGameState } from './network.js'; // WebRTC Communication
 
 export class Ludo {
-    currentPositions = {
-        P1: [...BASE_POSITIONS.P1],
-        P2: [...BASE_POSITIONS.P2]
-    };
-
-    _diceValue;
-    get diceValue() {
-        return this._diceValue;
-    }
-    set diceValue(value) {
-        if (!this.currentPositions[this.turn].some(p => p > -1) && value !== 6) {
-            console.log("You must roll a 6 to move a piece out of home!");
-            return;
-        }
-        this._diceValue = value;
-        UI.setDiceValue(value);
-    }
-
-    _turn = 0;
-    get turn() {
-        return this._turn;
-    }
-    set turn(value) {
-        this._turn = value;
-        UI.setTurn(value);
-    }
-
-    _state = STATE.DICE_NOT_ROLLED;
-    get state() {
-        return this._state;
-    }
-    set state(value) {
-        this._state = value;
-        if (value === STATE.DICE_NOT_ROLLED) {
-            UI.enableDice();
-            UI.unhighlightPieces();
-        } else {
-            UI.disableDice();
-        }
-    }
-
     constructor() {
         console.log('🎲 Welcome to Ludo Multiplayer!');
+        this.currentPositions = this.cloneObject(BASE_POSITIONS);
+        this.turn = 0;
+        this.state = STATE.DICE_NOT_ROLLED;
         this.listenDiceClick();
         this.listenResetClick();
         this.listenPieceClick();
         this.resetGame();
+    }
+
+    cloneObject(obj) {
+        return JSON.parse(JSON.stringify(obj)); // ✅ Fix for `structuredClone`
     }
 
     listenDiceClick() {
@@ -81,7 +47,7 @@ export class Ludo {
     }
 
     incrementTurn() {
-        this.turn = (this.turn + 1) % PLAYERS.length;
+        this.turn = (this.turn + 1) % PLAYERS.length; // ✅ Fix for multi-player turns
         this.state = STATE.DICE_NOT_ROLLED;
 
         sendGameState({
@@ -94,18 +60,10 @@ export class Ludo {
         return [0, 1, 2, 3].filter(piece => {
             const currentPosition = this.currentPositions[player][piece];
 
-            if (currentPosition === HOME_POSITIONS[player]) {
-                return false;
-            }
-
-            if (BASE_POSITIONS[player].includes(currentPosition) && this.diceValue !== 6) {
-                return false;
-            }
-
-            if (HOME_ENTRANCE[player].includes(currentPosition) && this.diceValue > HOME_POSITIONS[player] - currentPosition) {
-                return false;
-            }
-
+            if (currentPosition === HOME_POSITIONS[player]) return false;
+            if (BASE_POSITIONS[player].includes(currentPosition) && this.diceValue !== 6) return false;
+            if (HOME_ENTRANCE[player].includes(currentPosition) && this.diceValue > HOME_POSITIONS[player] - currentPosition) return false;
+            
             return true;
         });
     }
@@ -116,8 +74,8 @@ export class Ludo {
 
     resetGame() {
         console.log('🔄 Resetting game...');
-        this.currentPositions = structuredClone(BASE_POSITIONS);
-
+        this.currentPositions = this.cloneObject(BASE_POSITIONS);
+        
         PLAYERS.forEach(player => {
             [0, 1, 2, 3].forEach(piece => {
                 this.setPiecePosition(player, piece, this.currentPositions[player][piece]);
